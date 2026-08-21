@@ -44,21 +44,16 @@ module risc_ppl(clk1, clk2);
   reg HALTED;
   reg BRANCH_TAKEN;
   reg STALL;
-  // PROGRAM COUNTER
   reg [31:0] PC;
-  // FORWARDING OPERANDS
   reg [31:0] EX_A;
   reg [31:0] EX_B;
-  // DIRECT-MAPPED INSTRUCTION CACHE
-  // 16 lines
-  // 1 word per line
-  reg [31:0] ICache_data  [0:15];
-  reg [27:0] ICache_tag   [0:15];
-  reg        ICache_valid [0:15];
-  reg [31:0] DCache_data  [0:15];
-  reg [27:0] DCache_tag   [0:15];
-  reg        DCache_valid [0:15];
-
+  // INSTRUCTION CACHE
+  reg [31:0] ICache_data[0:15];
+  reg [27:0] ICache_tag [0:15];
+  reg ICache_valid [0:15];
+  reg [31:0] DCache_data[0:15];
+  reg [27:0] DCache_tag[0:15];
+  reg DCache_valid[0:15];
   integer ICache_hits;
   integer ICache_misses;
   integer DCache_hits;
@@ -71,7 +66,6 @@ module risc_ppl(clk1, clk2);
     begin
       EX_A = ID_IE_A;
       EX_B = ID_IE_B;
-      // EX/MEM R-type
       if ((IE_MEM_type == R_R) &&
           (IE_MEM_IR[15:11] != 0) &&
           (IE_MEM_IR[15:11] == ID_IE_IR[25:21]))
@@ -84,57 +78,48 @@ module risc_ppl(clk1, clk2);
         begin
           EX_A = IE_MEM_ALU_OUT;
         end
-      // MEM/WB R-type
       else if ((MEM_WB_type == R_R) &&
                (MEM_WB_IR[15:11] != 0) &&
                (MEM_WB_IR[15:11] == ID_IE_IR[25:21]))
         begin
           EX_A = MEM_WB_ALU_OUT;
         end
-      // MEM/WB I-type
       else if ((MEM_WB_type == R_I) &&
                (MEM_WB_IR[20:16] != 0) &&
                (MEM_WB_IR[20:16] == ID_IE_IR[25:21]))
         begin
           EX_A = MEM_WB_ALU_OUT;
         end
-      // MEM/WB LOAD
       else if ((MEM_WB_type == LOAD) &&
                (MEM_WB_IR[20:16] != 0) &&
                (MEM_WB_IR[20:16] == ID_IE_IR[25:21]))
         begin
           EX_A = MEM_WB_LMD;
         end
-      // OPERAND B
-      // EX/MEM R-type
       if ((IE_MEM_type == R_R) &&
           (IE_MEM_IR[15:11] != 0) &&
           (IE_MEM_IR[15:11] == ID_IE_IR[20:16]))
         begin
           EX_B = IE_MEM_ALU_OUT;
         end
-      // EX/MEM I-type
       else if ((IE_MEM_type == R_I) &&
                (IE_MEM_IR[20:16] != 0) &&
                (IE_MEM_IR[20:16] == ID_IE_IR[20:16]))
         begin
           EX_B = IE_MEM_ALU_OUT;
         end
-      // MEM/WB R-type
       else if ((MEM_WB_type == R_R) &&
                (MEM_WB_IR[15:11] != 0) &&
                (MEM_WB_IR[15:11] == ID_IE_IR[20:16]))
         begin
           EX_B = MEM_WB_ALU_OUT;
         end
-      // MEM/WB I-type
       else if ((MEM_WB_type == R_I) &&
                (MEM_WB_IR[20:16] != 0) &&
                (MEM_WB_IR[20:16] == ID_IE_IR[20:16]))
         begin
           EX_B = MEM_WB_ALU_OUT;
         end
-      // MEM/WB LOAD
       else if ((MEM_WB_type == LOAD) &&
                (MEM_WB_IR[20:16] != 0) &&
                (MEM_WB_IR[20:16] == ID_IE_IR[20:16]))
@@ -160,28 +145,28 @@ module risc_ppl(clk1, clk2);
       begin
         if(STALL == 1)
           begin
-            PC <= #2 PC;
-            IF_ID_IR  <= #2 IF_ID_IR;
-            IF_ID_NPC <= #2 IF_ID_NPC;
+            PC <=PC;
+            IF_ID_IR  <=IF_ID_IR;
+            IF_ID_NPC <=IF_ID_NPC;
           end
         else
           begin
             if(ICache_valid[IF_index] &&
                ICache_tag[IF_index] == IF_tag)
               begin
-                IF_ID_IR <= #2 ICache_data[IF_index];
+                IF_ID_IR <=ICache_data[IF_index];
                 ICache_hits = ICache_hits + 1;
               end
             else
               begin
                 ICache_misses = ICache_misses + 1;
-                ICache_data[IF_index] <= #2 mem_file[PC];
-                ICache_tag[IF_index] <= #2 IF_tag;
-                ICache_valid[IF_index] <= #2 1;
-                IF_ID_IR <= #2 mem_file[PC];
+                ICache_data[IF_index] <=mem_file[PC];
+                ICache_tag[IF_index] <=IF_tag;
+                ICache_valid[IF_index] <= 1;
+                IF_ID_IR <=mem_file[PC];
               end
-            IF_ID_NPC <= #2 PC + 1;
-            PC <= #2 PC + 1;
+            IF_ID_NPC <=PC + 1;
+            PC <= PC + 1;
           end
       end
   always @(posedge clk2)
@@ -189,109 +174,108 @@ module risc_ppl(clk1, clk2);
       begin
         if(STALL == 1)
           begin
-            ID_IE_IR   <= #2 0;
-            ID_IE_type <= #2 R_I;
-            ID_IE_NPC  <= #2 0;
-            ID_IE_A    <= #2 0;
-            ID_IE_B    <= #2 0;
-            ID_IE_IMM  <= #2 0;
+            ID_IE_IR   <=0;
+            ID_IE_type <=R_I;
+            ID_IE_NPC  <=0;
+            ID_IE_A    <=0;
+            ID_IE_B    <=0;
+            ID_IE_IMM  <=0;
           end
         else
           begin
-            ID_IE_IR  <= #2 IF_ID_IR;
-            ID_IE_NPC <= #2 IF_ID_NPC;
-            ID_IE_A <= #2 reg_file[IF_ID_IR[25:21]];
-            ID_IE_B <= #2 reg_file[IF_ID_IR[20:16]];
-            ID_IE_IMM <= #2
-              {{16{IF_ID_IR[15]}},IF_ID_IR[15:0]};
+            ID_IE_IR  <=IF_ID_IR;
+            ID_IE_NPC <=IF_ID_NPC;
+            ID_IE_A <=reg_file[IF_ID_IR[25:21]];
+            ID_IE_B <=reg_file[IF_ID_IR[20:16]];
+            ID_IE_IMM <={{16{IF_ID_IR[15]}},IF_ID_IR[15:0]};
             case(IF_ID_IR[31:26])
               ADD,SUB,AND,OR,SLT,MUL:
-                ID_IE_type <= #2 R_R;
+                ID_IE_type <=R_R;
               LDR:
-                ID_IE_type <= #2 LOAD;
+                ID_IE_type <=LOAD;
               STR:
-                ID_IE_type <= #2 STORE;
+                ID_IE_type <=STORE;
               ADDI,SUBI,SLTI:
-                ID_IE_type <= #2 R_I;
+                ID_IE_type <=R_I;
               BNEQZ,BEQZ:
-                ID_IE_type <= #2 BRANCH;
+                ID_IE_type <=BRANCH;
               HLT:
-                ID_IE_type <= #2 HALT;
+                ID_IE_type <=HALT;
               default:
-                ID_IE_type <= #2 HALT;
+                ID_IE_type <=HALT;
             endcase
           end
       end
   always @(posedge clk1)
     if(HALTED == 0)
       begin
-        IE_MEM_IR   <= #2 ID_IE_IR;
-        IE_MEM_type <= #2 ID_IE_type;
-        BRANCH_TAKEN <= #2 0;
+        IE_MEM_IR   <=ID_IE_IR;
+        IE_MEM_type <=ID_IE_type;
+        BRANCH_TAKEN <=0;
         case(ID_IE_type)
           R_R:
             begin
               case(ID_IE_IR[31:26])
                 ADD:
-                  IE_MEM_ALU_OUT <= #2 EX_A + EX_B;
+                  IE_MEM_ALU_OUT <=EX_A + EX_B;
                 SUB:
-                  IE_MEM_ALU_OUT <= #2 EX_A - EX_B;
+                  IE_MEM_ALU_OUT <=EX_A - EX_B;
                 AND:
-                  IE_MEM_ALU_OUT <= #2 EX_A & EX_B;
+                  IE_MEM_ALU_OUT <=EX_A & EX_B;
                 OR:
-                  IE_MEM_ALU_OUT <= #2 EX_A | EX_B;
+                  IE_MEM_ALU_OUT <=EX_A | EX_B;
                 SLT:
                   begin
                     if(EX_A < EX_B)
-                      IE_MEM_ALU_OUT <= #2 1;
+                      IE_MEM_ALU_OUT <=1;
                     else
-                      IE_MEM_ALU_OUT <= #2 0;
+                      IE_MEM_ALU_OUT <=0;
                   end
                 MUL:
-                  IE_MEM_ALU_OUT <= #2 EX_A * EX_B;
+                  IE_MEM_ALU_OUT <=EX_A * EX_B;
                 default:
-                  IE_MEM_ALU_OUT <= #2 32'hxxxxxxxx;
+                  IE_MEM_ALU_OUT <=32'hxxxxxxxx;
               endcase
             end
           R_I:
             begin
               case(ID_IE_IR[31:26])
                 ADDI:
-                  IE_MEM_ALU_OUT <= #2 EX_A + ID_IE_IMM;
+                  IE_MEM_ALU_OUT <=EX_A + ID_IE_IMM;
                 SUBI:
-                  IE_MEM_ALU_OUT <= #2 EX_A - ID_IE_IMM;
+                  IE_MEM_ALU_OUT <=EX_A - ID_IE_IMM;
                 SLTI:
                   begin
                     if(EX_A < ID_IE_IMM)
-                      IE_MEM_ALU_OUT <= #2 1;
+                      IE_MEM_ALU_OUT <=1;
                     else
-                      IE_MEM_ALU_OUT <= #2 0;
+                      IE_MEM_ALU_OUT <=0;
                   end
                 default:
-                  IE_MEM_ALU_OUT <= #2 32'hxxxxxxxx;
+                  IE_MEM_ALU_OUT <=32'hxxxxxxxx;
               endcase
             end
           LOAD,STORE:
             begin
-              IE_MEM_ALU_OUT <= #2 EX_A + ID_IE_IMM;
-              IE_MEM_B <= #2 EX_B;
+              IE_MEM_ALU_OUT <=EX_A + ID_IE_IMM;
+              IE_MEM_B <=EX_B;
             end
           BRANCH:
             begin
-              IE_MEM_ALU_OUT <= #2 ID_IE_NPC + ID_IE_IMM;
-              IE_MEM_cond <= #2 (EX_A == 0);
+              IE_MEM_ALU_OUT <=ID_IE_NPC + ID_IE_IMM;
+              IE_MEM_cond <=(EX_A == 0);
             end
         endcase
       end
   always @(posedge clk2)
     if(HALTED == 0)
       begin
-        MEM_WB_IR   <= #2 IE_MEM_IR;
-        MEM_WB_type <= #2 IE_MEM_type;
+        MEM_WB_IR   <=IE_MEM_IR;
+        MEM_WB_type <=IE_MEM_type;
         case(IE_MEM_type)
           R_R,R_I:
             begin
-              MEM_WB_ALU_OUT <= #2 IE_MEM_ALU_OUT;
+              MEM_WB_ALU_OUT <=IE_MEM_ALU_OUT;
             end
           LOAD:
             begin
@@ -302,8 +286,7 @@ module risc_ppl(clk1, clk2);
                   // CACHE HIT
                   DCache_hits = DCache_hits + 1;
 
-                  MEM_WB_LMD <= #2
-                    DCache_data[IE_MEM_ALU_OUT[3:0]];
+                  MEM_WB_LMD <=DCache_data[IE_MEM_ALU_OUT[3:0]];
                 end
               else
                 begin
@@ -311,35 +294,35 @@ module risc_ppl(clk1, clk2);
                   DCache_misses = DCache_misses + 1;
                   // Refill cache
                   DCache_data[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 mem_file[IE_MEM_ALU_OUT];
+                    <=mem_file[IE_MEM_ALU_OUT];
                   DCache_tag[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 IE_MEM_ALU_OUT[31:4];
+                    <=IE_MEM_ALU_OUT[31:4];
                   DCache_valid[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 1;
-                  MEM_WB_LMD <= #2
+                    <=1;
+                  MEM_WB_LMD <=
                     mem_file[IE_MEM_ALU_OUT];
                 end
             end
           STORE:
             begin
-              mem_file[IE_MEM_ALU_OUT] <= #2 IE_MEM_B;
+              mem_file[IE_MEM_ALU_OUT] <=IE_MEM_B;
               if(DCache_valid[IE_MEM_ALU_OUT[3:0]] &&
                  DCache_tag[IE_MEM_ALU_OUT[3:0]]
                    == IE_MEM_ALU_OUT[31:4])
                 begin
                   DCache_hits = DCache_hits + 1;
                   DCache_data[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 IE_MEM_B;
+                    <=IE_MEM_B;
                 end
               else
                 begin
                   DCache_misses = DCache_misses + 1;
                   DCache_data[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 IE_MEM_B;
+                    <=IE_MEM_B;
                   DCache_tag[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 IE_MEM_ALU_OUT[31:4];
+                    <=IE_MEM_ALU_OUT[31:4];
                   DCache_valid[IE_MEM_ALU_OUT[3:0]]
-                    <= #2 1;
+                    <=1;
                 end
             end
         endcase
@@ -352,19 +335,19 @@ module risc_ppl(clk1, clk2);
             begin
               if(MEM_WB_IR[15:11] != 0)
                 reg_file[MEM_WB_IR[15:11]]
-                  <= #2 MEM_WB_ALU_OUT;
+                  <=MEM_WB_ALU_OUT;
             end
           R_I:
             begin
               if(MEM_WB_IR[20:16] != 0)
                 reg_file[MEM_WB_IR[20:16]]
-                  <= #2 MEM_WB_ALU_OUT;
+                  <=MEM_WB_ALU_OUT;
             end
           LOAD:
             begin
               if(MEM_WB_IR[20:16] != 0)
                 reg_file[MEM_WB_IR[20:16]]
-                  <= #2 MEM_WB_LMD;
+                  <=MEM_WB_LMD;
             end
           HALT:
             begin
