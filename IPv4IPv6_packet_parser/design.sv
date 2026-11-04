@@ -8,7 +8,7 @@ module packet_parser (
     input rx_last,
     output rx_ready,
 
-    // ── IPv4 parsed fields ──────────────────────────────────
+    //IPv4 parsed fields
     output reg ipv4_valid,
     output reg  [3:0]  ipv4_version,
     output reg  [3:0]  ipv4_ihl,
@@ -23,7 +23,7 @@ module packet_parser (
     output reg  [31:0] ipv4_src_addr,
     output reg  [31:0] ipv4_dst_addr,
 
-    // ── IPv6 parsed fields ──────────────────────────────────
+    //IPv6 parsed fields
     output reg ipv6_valid,
     output reg  [3:0]  ipv6_version,
     output reg  [7:0]  ipv6_traffic_class,
@@ -34,17 +34,14 @@ module packet_parser (
     output reg  [127:0] ipv6_src_addr,
     output reg  [127:0] ipv6_dst_addr,
 
-    // ── Status ───────────────────────────────────────────────
+    //Status
     output reg parse_done,
     output reg  [1:0]  ip_version_out,
     output reg parse_error
 );
 
 assign rx_ready = 1'b1;
-
-// ── Global byte counter — resets after rx_last ──────────────
 reg [7:0] gcnt;
-
 always @(posedge clk or negedge rst_n)
   begin
     if (!rst_n)
@@ -57,8 +54,6 @@ always @(posedge clk or negedge rst_n)
           gcnt <= gcnt + 8'd1;
     end
 end
-
-// ── Latch EtherType high byte (byte 12) ─────────────────────
 reg [7:0] etype_hi;
 always @(posedge clk or negedge rst_n)
   begin
@@ -67,8 +62,6 @@ always @(posedge clk or negedge rst_n)
     else if (rx_valid && gcnt == 8'd12)
       etype_hi <= rx_data;
 end
-
-// ── Latch packet type on byte 13 (low byte of EtherType) ────
 reg pkt_is_ipv4, pkt_is_ipv6;
 always @(posedge clk or negedge rst_n)
   begin
@@ -88,10 +81,9 @@ always @(posedge clk or negedge rst_n)
         pkt_is_ipv6 <= 1'b0;
       end
   end
-// Offset from start of IP header (Ethernet header is 14 bytes)
 wire [7:0] ip_off = gcnt - 8'd14;
 
-// ── Main parse block ─────────────────────────────────────────
+//Main parse block
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
       begin
@@ -120,12 +112,9 @@ always @(posedge clk or negedge rst_n) begin
         ipv6_hop_limit   <= 0;
         ipv6_src_addr  <= 0;
         ipv6_dst_addr <= 0;
-    end else begin
-        // Pulse signals — cleared every cycle unless re-asserted
+    end else begin       
         parse_done  <= 1'b0;
         parse_error <= 1'b0;
-
-        // Clear valid outputs at the very start of each new packet
         if (rx_valid && gcnt == 8'd0) begin
             ipv4_valid <= 1'b0;
             ipv6_valid <= 1'b0;
@@ -133,10 +122,7 @@ always @(posedge clk or negedge rst_n) begin
         end
 
         if (rx_valid && gcnt >= 8'd14) begin
-
-            // ════════════════════════════════════════════════
-            //  IPv4 — 20-byte fixed header
-            // ════════════════════════════════════════════════
+            //  IPv4
             if (pkt_is_ipv4) begin
                 case (ip_off)
                     8'd0:  begin
@@ -174,11 +160,8 @@ always @(posedge clk or negedge rst_n) begin
                            end
                     default: ;
                 endcase
-            end // pkt_is_ipv4
-
-            // ════════════════════════════════════════════════
-            //  IPv6 — 40-byte fixed header
-            // ════════════════════════════════════════════════
+            end
+            //IPv6
             if (pkt_is_ipv6) begin
                 case (ip_off)
                     8'd0:  begin
@@ -197,7 +180,6 @@ always @(posedge clk or negedge rst_n) begin
                     8'd5:  ipv6_payload_len[7:0]   <= rx_data;
                     8'd6:  ipv6_next_header        <= rx_data;
                     8'd7:  ipv6_hop_limit          <= rx_data;
-                    // Source address (16 bytes, offsets 8–23)
                     8'd8:  ipv6_src_addr[127:120]  <= rx_data;
                     8'd9:  ipv6_src_addr[119:112]  <= rx_data;
                     8'd10: ipv6_src_addr[111:104]  <= rx_data;
@@ -214,7 +196,6 @@ always @(posedge clk or negedge rst_n) begin
                     8'd21: ipv6_src_addr[23:16]    <= rx_data;
                     8'd22: ipv6_src_addr[15:8]     <= rx_data;
                     8'd23: ipv6_src_addr[7:0]      <= rx_data;
-                    // Destination address (16 bytes, offsets 24–39)
                     8'd24: ipv6_dst_addr[127:120]  <= rx_data;
                     8'd25: ipv6_dst_addr[119:112]  <= rx_data;
                     8'd26: ipv6_dst_addr[111:104]  <= rx_data;
@@ -238,9 +219,9 @@ always @(posedge clk or negedge rst_n) begin
                            end
                     default: ;
                 endcase
-            end // pkt_is_ipv6
+            end 
 
-        end // gcnt >= 14
+        end 
     end
 end
 
