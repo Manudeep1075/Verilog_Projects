@@ -1,7 +1,3 @@
-`timescale 1ns/1ps
-// ============================================================
-//  Testbench — packet_parser
-// ============================================================
 module tb_packet_parser;
 
     reg        clk, rst_n;
@@ -53,17 +49,15 @@ module tb_packet_parser;
     );
 
     always #5 clk = ~clk;
-
-    // Send one byte, assert rx_last on final byte
     task send_byte;
         input [7:0] d;
         input       last;
         begin
-            @(negedge clk);       // drive on falling edge
+            @(negedge clk);       
             rx_data  = d;
             rx_valid = 1'b1;
             rx_last  = last;
-            @(posedge clk);       // DUT samples on rising edge
+            @(posedge clk);   
             #1;
             rx_valid = 1'b0;
             rx_last  = 1'b0;
@@ -81,8 +75,6 @@ module tb_packet_parser;
                 send_byte(pkt[j], (j == len - 1));
         end
     endtask
-
-    // Wait up to N cycles for a condition
     task wait_for_valid;
         input integer max_cycles;
         integer k;
@@ -101,48 +93,40 @@ module tb_packet_parser;
         repeat(4) @(posedge clk);
         rst_n = 1;
         repeat(2) @(posedge clk);
-
-        // ═══════════════════════════════════════════════════
-        //  TEST 1 — IPv4
-        //  Src: 192.168.1.1  Dst: 10.0.0.1
-        //  Proto: 6 (TCP)  TTL: 64
-        // ═══════════════════════════════════════════════════
-        // Ethernet header (14 bytes)
         pkt[0]=8'hff;
       	pkt[1]=8'hff;
       	pkt[2]=8'hff;
         pkt[3]=8'hff;
       	pkt[4]=8'hff;
-      	pkt[5]=8'hff;   // DST MAC
+      	pkt[5]=8'hff;   
         pkt[6]=8'h00;
       	pkt[7]=8'h11;
       	pkt[8]=8'h22;
         pkt[9]=8'h33;
       	pkt[10]=8'h44;
-      	pkt[11]=8'h55;  // SRC MAC
+      	pkt[11]=8'h55;  
         pkt[12]=8'h08;
-      	pkt[13]=8'h00;                 // EtherType = IPv4
-        // IPv4 header (20 bytes)
-        pkt[14]=8'h45;                                 // ver=4, IHL=5
-        pkt[15]=8'h00;                                 // DSCP/ECN
+      	pkt[13]=8'h00;
+        pkt[14]=8'h45;                                 
+        pkt[15]=8'h00;                                 
         pkt[16]=8'h00;
-      	pkt[17]=8'h28;                 // total len = 40
+      	pkt[17]=8'h28;                 
         pkt[18]=8'h12;
-      	pkt[19]=8'h34;                 // ID
+      	pkt[19]=8'h34;                 
         pkt[20]=8'h40;
-      	pkt[21]=8'h00;                 // flags=DF, frag=0
-        pkt[22]=8'h40;                                 // TTL=64
-        pkt[23]=8'h06;                                 // Protocol=TCP
+      	pkt[21]=8'h00;                 
+        pkt[22]=8'h40;                                 
+        pkt[23]=8'h06;                                 
         pkt[24]=8'hb8;
-      	pkt[25]=8'h61;                 // checksum
+      	pkt[25]=8'h61;                 
         pkt[26]=8'hc0;
       	pkt[27]=8'ha8;
       	pkt[28]=8'h01;
-      	pkt[29]=8'h01; // 192.168.1.1
+      	pkt[29]=8'h01; 
         pkt[30]=8'h0a;
       	pkt[31]=8'h00;
       	pkt[32]=8'h00;
-      	pkt[33]=8'h01; // 10.0.0.1
+      	pkt[33]=8'h01; 
         plen = 34;
 
         $display("=== Sending IPv4 packet ===");
@@ -172,37 +156,27 @@ module tb_packet_parser;
         end
 
         repeat(5) @(posedge clk);
-
-        // ═══════════════════════════════════════════════════
-        //  TEST 2 — IPv6
-        //  Src: 2001:db8::1   Dst: 2001:db8::2
-        //  Next Header: 0x3a (ICMPv6)  Hop Limit: 255
-        // ═══════════════════════════════════════════════════
-        // Ethernet header
         pkt[0]=8'hff; pkt[1]=8'hff; pkt[2]=8'hff;
         pkt[3]=8'hff; pkt[4]=8'hff; pkt[5]=8'hff;
         pkt[6]=8'haa; pkt[7]=8'hbb; pkt[8]=8'hcc;
         pkt[9]=8'hdd; pkt[10]=8'hee; pkt[11]=8'hff;
-        pkt[12]=8'h86; pkt[13]=8'hDD;                 // EtherType = IPv6
-        // IPv6 fixed header (40 bytes)
-        pkt[14]=8'h60; pkt[15]=8'h00;                 // ver=6, TC=0, flow[19:16]=0
-        pkt[16]=8'h00; pkt[17]=8'h00;                 // flow[15:0]
-        pkt[18]=8'h00; pkt[19]=8'h14;                 // payload len = 20
-        pkt[20]=8'h3a;                                 // Next Header = ICMPv6
-        pkt[21]=8'hff;                                 // Hop Limit = 255
-        // src = 2001:0db8:0000:0000:0000:0000:0000:0001
+        pkt[12]=8'h86; pkt[13]=8'hDD;                
+        pkt[14]=8'h60; pkt[15]=8'h00;                 
+        pkt[16]=8'h00; pkt[17]=8'h00;                 
+        pkt[18]=8'h00; pkt[19]=8'h14;                 
+        pkt[20]=8'h3a;                                 
+        pkt[21]=8'hff;                                 
         pkt[22]=8'h20; pkt[23]=8'h01; pkt[24]=8'h0d; pkt[25]=8'hb8;
         pkt[26]=8'h00; pkt[27]=8'h00; pkt[28]=8'h00; pkt[29]=8'h00;
         pkt[30]=8'h00; pkt[31]=8'h00; pkt[32]=8'h00; pkt[33]=8'h00;
         pkt[34]=8'h00; pkt[35]=8'h00; pkt[36]=8'h00; pkt[37]=8'h01;
-        // dst = 2001:0db8:0000:0000:0000:0000:0000:0002
         pkt[38]=8'h20; pkt[39]=8'h01; pkt[40]=8'h0d; pkt[41]=8'hb8;
         pkt[42]=8'h00; pkt[43]=8'h00; pkt[44]=8'h00; pkt[45]=8'h00;
         pkt[46]=8'h00; pkt[47]=8'h00; pkt[48]=8'h00; pkt[49]=8'h00;
         pkt[50]=8'h00; pkt[51]=8'h00; pkt[52]=8'h00; pkt[53]=8'h02;
         plen = 54;
 
-        $display("\n=== Sending IPv6 packet ===");
+        $display("\n Sending IPv6 packet");
         send_packet(plen);
         wait_for_valid(20);
 
@@ -229,7 +203,6 @@ module tb_packet_parser;
         end
 
         repeat(5) @(posedge clk);
-        $display("\nSimulation complete.");
         $finish;
     end
 
